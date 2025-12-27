@@ -52,6 +52,16 @@ dev = [
     "rich>=14.0.0",
     "basedpyright>=1.29.1",
     "funlog>=0.2.1",
+    "pytest-mock>=3.15.1",
+    "pytest-recording>=0.13.4",
+    "pytest-retry>=1.7.0",
+    "pytest-skip-slow>=0.0.5",
+    "pytest-skipuntil>=0.2.0",
+    "pytest-subprocess>=1.5.3",
+    "pytest-timeout>=2.4.0",
+    "pytest-cov>=7.0.0",
+    "monkeytype>=23.3.0",
+    "ty>=0.0.7",
 ]
 
 [project.scripts]
@@ -129,6 +139,9 @@ ignore = [
 ]
 
 [tool.basedpyright]
+typeCheckingMode = "recommended"
+failOnWarnings = false
+allowedUntypedLibraries = ["ultralytics", "wandb", "matplotlib", "seaborn", "pyyaml", "opencv-python", "cv2", "numpy"]
 # BasedPyright currently seems like the best type checker option, much faster
 # than mypy and with a good extension for VSCode/Cursor.
 # https://marketplace.visualstudio.com/items?itemName=detachhead.basedpyright
@@ -148,6 +161,7 @@ reportAny = false
 reportExplicitAny = false
 reportImplicitStringConcatenation = false
 reportUnreachable = false
+reportUnannotatedClassAttribute = false
 # reportPrivateImportUsage = false
 # reportPrivateLocalImportUsage = false
 # reportMissingImports = false
@@ -161,12 +175,94 @@ reportUnreachable = false
 # skip = "foo.py,bar.py"
 
 [tool.pytest.ini_options]
-python_files = ["*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-testpaths = [
-    "src",
-    "tests",
+addopts = [
+    "--cov-branch",
+    "--cov-report=annotate:cov_annotate",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml:cov.xml",
+    "--cov=src",
+    "--durations-min=0.05",
+    "--durations=10",
+    "--junitxml=junit/test-results.xml",
+    "--timeout=30",
+    "--timeout_method=thread",
 ]
-norecursedirs = []
-filterwarnings = []
+filterwarnings = [
+    "ignore::DeprecationWarning:.venv.*:",
+    "ignore::ResourceWarning:asyncio",
+]
+markers = [
+    "e2e: marks tests dealing with e2e testing (deselect with '-m \"not e2e\"')",
+    "fast: marks tests as fast (run with '-m fast')",
+    "integration: marks tests dealing with integration testing (deselect with '-m \"not integration\"')",
+    "slow: marks tests as slow (run with '-m slow')",
+    "unittest: marks tests dealing with unittest (deselect with '-m \"not unittest\"')",
+]
+python_classes = ["Test*"]
+python_files = ["*.py"]
+python_functions = ["test_*"]
+pythonpath = "."
+testpaths = ["src", "tests"]
+timeout = 30
+timeout_method = "thread"
+
+# ===========================[ COVERAGE CONFIGURATION ]========================
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.paths]
+source = ["src/"]
+
+[tool.coverage.report]
+exclude_also = [
+    "@(abc\\.)?abstractmethod",
+    "\\A(?s:.*# pragma: exclude file.*)\\Z",
+    "def __repr__",
+    "except ValueError:\\n\\s*assume\\(False\\)",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if self\\.debug",
+    "no cover: start(?s:.)*?no cover: stop",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+exclude_lines = [
+    "@(abc.)?abstractmethod",
+    "@overload",
+    "@typing.overload",
+    "assert_never",
+    "def __repr__",
+    "def __str__",
+    "except ImportError:",
+    "if TYPE_CHECKING",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "if self.debug",
+    "if settings.DEBUG",
+    "if typing.TYPE_CHECKING:",
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "return NotImplemented",
+    "typing.assert_never",
+    '\\(Protocol\\):',
+    '\\s*\\.\\.\\.',
+]
+ignore_errors = false
+omit = ["*/test/*", "*/tests/*"]
+show_missing = true
+skip_covered = false
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+concurrency = ["multiprocessing", "thread"]
+data_file = ".coverage"
+parallel = true
+relative_files = true
+source = ["src"]
+
+[tool.coverage.xml]
+output = "cov.xml"
