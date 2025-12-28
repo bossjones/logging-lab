@@ -16,17 +16,36 @@ import atexit
 import logging
 import logging.config
 import sys
-from logging.handlers import QueueListener
+from logging.handlers import QueueHandler, QueueListener
 from queue import Queue
 from typing import Any
 
 import structlog
 from asgi_correlation_id import correlation_id
 from opentelemetry import trace
+from typing_extensions import override
 
 # Module-level state for QueueListener lifecycle management
 _queue_listener: QueueListener | None = None
 _log_queue: Queue[logging.LogRecord] | None = None
+
+
+class NonFormattingQueueHandler(QueueHandler):
+    """
+    QueueHandler that preserves the original LogRecord without pre-formatting.
+
+    The standard QueueHandler.prepare() calls format() and sets record.msg to
+    the formatted string, which breaks structlog's ProcessorFormatter that
+    expects record.msg to be the original event dict. This subclass skips
+    the formatting step to preserve the dict through the queue.
+    """
+
+    @override
+    def prepare(self, record: logging.LogRecord) -> logging.LogRecord:
+        """Prepare record for queuing without formatting."""
+        # Do NOT call format() or modify record.msg/record.args
+        # Just return the record as-is so ProcessorFormatter can handle it
+        return record
 
 
 def add_correlation_id(
@@ -122,6 +141,7 @@ def configure_logging(json_output: bool = False, log_level: str = "INFO") -> Non
     _log_queue = Queue(-1)  # Unbounded queue
 
     # Create the ProcessorFormatter for stdlib integration
+    # Handles both structlog logs (via wrap_for_formatter) and foreign logs (Uvicorn, etc.)
     processor_formatter = structlog.stdlib.ProcessorFormatter(
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
@@ -136,6 +156,9 @@ def configure_logging(json_output: bool = False, log_level: str = "INFO") -> Non
     console_handler.setFormatter(processor_formatter)
     console_handler.setLevel(level)
 
+    # Create the non-formatting queue handler to preserve structlog's event dict
+    queue_handler = NonFormattingQueueHandler(_log_queue)
+
     # Configure stdlib logging via dictConfig
     logging.config.dictConfig(
         {
@@ -143,8 +166,7 @@ def configure_logging(json_output: bool = False, log_level: str = "INFO") -> Non
             "disable_existing_loggers": False,
             "handlers": {
                 "queue": {
-                    "class": "logging.handlers.QueueHandler",
-                    "queue": _log_queue,
+                    "()": lambda: queue_handler,  # Use our pre-created handler
                 },
             },
             "loggers": {

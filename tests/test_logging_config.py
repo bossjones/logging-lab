@@ -366,7 +366,7 @@ class TestConfigureLoggingIntegration:
         configure_logging(json_output=False)
         root_logger = logging.getLogger()
         handler_types = [type(h).__name__ for h in root_logger.handlers]
-        assert "QueueHandler" in handler_types
+        assert "NonFormattingQueueHandler" in handler_types
 
 
 class TestConfigureLoggingLogLevel:
@@ -488,7 +488,7 @@ class TestStdlibLoggerIntegration:
 
         root = logging.getLogger()
         handler_types = [type(h).__name__ for h in root.handlers]
-        assert "QueueHandler" in handler_types
+        assert "NonFormattingQueueHandler" in handler_types
 
     def test_uvicorn_access_logger_silenced(self) -> None:
         """Uvicorn access logger is silenced to avoid duplicates."""

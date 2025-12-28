@@ -4,7 +4,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype locust locust-ui
+.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype locust locust-ui serve
 
 default: agent-rules install lint test ## Run agent-rules, install, lint, and test
 
@@ -108,3 +108,8 @@ locust: ## Run Locust load tests (headless mode). Usage: make locust [USERS=10] 
 locust-ui: ## Run Locust with web UI. Usage: make locust-ui [HOST=http://localhost:5002]
 	@echo "🚀 Running Locust with web UI"
 	@uv run locust -f locustfile.py -H $(or $(HOST),http://localhost:5002)
+
+.PHONY: serve
+serve: ## Start the FastAPI server. Usage: make serve [PORT=5002] [RELOAD=--reload]
+	@echo "🚀 Starting FastAPI server"
+	@uv run uvicorn logging_lab.app:app --host 0.0.0.0 --port $(or $(PORT),5002) $(RELOAD)
