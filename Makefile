@@ -83,3 +83,15 @@ clean: ## Remove build artifacts and cache directories
 help: ## Show this help message
 	@uv run python -c "import re; \
 	[[print(f'\033[36m{m[0]:<20}\033[0m {m[1]}') for m in re.findall(r'^([a-zA-Z_-]+):.*?## (.*)$$', open(makefile).read(), re.M)] for makefile in ('$(MAKEFILE_LIST)').strip().split()]"
+
+claude-skills: ## Install Claude skills
+	@echo "🚀 Installing Claude skills"
+	@npx skills-installer install @SlanyCukr/riot-api-project/uvicorn --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/sqlalchemy --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/pytest --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/pydantic --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/httpx --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/fastapi --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/apscheduler --local --client claude-code
+	@npx skills-installer install @SlanyCukr/riot-api-project/alembic --local --client claude-code
+	@npx claude-plugins install @JosiahSiegel/claude-plugin-marketplace/python-master
