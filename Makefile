@@ -4,7 +4,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype
+.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype locust locust-ui
 
 default: agent-rules install lint test ## Run agent-rules, install, lint, and test
 
@@ -95,3 +95,16 @@ claude-skills: ## Install Claude skills
 	@npx skills-installer install @SlanyCukr/riot-api-project/apscheduler --local --client claude-code
 	@npx skills-installer install @SlanyCukr/riot-api-project/alembic --local --client claude-code
 	@npx claude-plugins install @JosiahSiegel/claude-plugin-marketplace/python-master
+
+.PHONY: locust
+locust: ## Run Locust load tests (headless mode). Usage: make locust [USERS=10] [SPAWN_RATE=1] [HOST=http://localhost:5002]
+	@echo "🚀 Running Locust load tests"
+	@uv run locust -f locustfile.py --headless \
+		--users $(or $(USERS),10) \
+		--spawn-rate $(or $(SPAWN_RATE),1) \
+		-H $(or $(HOST),http://localhost:5002)
+
+.PHONY: locust-ui
+locust-ui: ## Run Locust with web UI. Usage: make locust-ui [HOST=http://localhost:5002]
+	@echo "🚀 Running Locust with web UI"
+	@uv run locust -f locustfile.py -H $(or $(HOST),http://localhost:5002)
