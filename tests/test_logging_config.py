@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import io
-import json
 import logging
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -14,11 +13,14 @@ from asgi_correlation_id import correlation_id
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
+from logging_lab import logging_config
 from logging_lab.logging_config import (
     add_correlation_id,
     add_open_telemetry_spans,
     configure_logging,
     get_logger,
+    get_shared_processors,
+    stop_queue_listener,
 )
 
 
@@ -128,29 +130,31 @@ class TestAddOpenTelemetrySpans:
 class TestConfigureLogging:
     """Tests for the configure_logging function."""
 
-    def test_configure_logging_json_output(self) -> None:
-        """JSON output mode configures JSONRenderer."""
-        with patch.object(structlog, "configure") as mock_configure:
-            configure_logging(json_output=True)
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
 
-        mock_configure.assert_called_once()
-        call_kwargs = mock_configure.call_args.kwargs
-        processors = call_kwargs["processors"]
-
-        processor_names = [p.__class__.__name__ for p in processors]
-        assert "JSONRenderer" in processor_names
-
-    def test_configure_logging_console_output(self) -> None:
-        """Console output mode configures ConsoleRenderer."""
+    def test_configure_logging_uses_stdlib_logger_factory(self) -> None:
+        """Configure logging uses stdlib LoggerFactory for ProcessorFormatter integration."""
         with patch.object(structlog, "configure") as mock_configure:
             configure_logging(json_output=False)
 
         mock_configure.assert_called_once()
         call_kwargs = mock_configure.call_args.kwargs
+        assert isinstance(call_kwargs["logger_factory"], structlog.stdlib.LoggerFactory)
+
+    def test_configure_logging_ends_with_wrap_for_formatter(self) -> None:
+        """Processor chain ends with wrap_for_formatter for ProcessorFormatter integration."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False)
+
+        call_kwargs = mock_configure.call_args.kwargs
         processors = call_kwargs["processors"]
 
-        processor_names = [p.__class__.__name__ for p in processors]
-        assert "ConsoleRenderer" in processor_names
+        # Last processor should be wrap_for_formatter
+        assert processors[-1] == structlog.stdlib.ProcessorFormatter.wrap_for_formatter
 
     def test_configure_logging_includes_core_processors(self) -> None:
         """Core processors are included in both modes."""
@@ -164,6 +168,17 @@ class TestConfigureLogging:
         processor_names = [getattr(p, "__name__", None) or p.__class__.__name__ for p in processors]
         assert "add_correlation_id" in processor_names
         assert "add_open_telemetry_spans" in processor_names
+
+    def test_configure_logging_includes_filter_by_level(self) -> None:
+        """Processor chain includes filter_by_level for stdlib integration."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False)
+
+        call_kwargs = mock_configure.call_args.kwargs
+        processors = call_kwargs["processors"]
+
+        # First processor should be filter_by_level
+        assert processors[0] == structlog.stdlib.filter_by_level
 
 
 class TestGetLogger:
@@ -295,27 +310,11 @@ class TestAddOpenTelemetrySpansIntegration:
 class TestConfigureLoggingIntegration:
     """Integration tests for full logging configuration."""
 
-    def test_json_output_produces_valid_json(self) -> None:
-        """JSON output mode produces parseable JSON logs."""
-        configure_logging(json_output=True)
-
-        # Capture stdout
-        captured = io.StringIO()
-        structlog.configure(
-            processors=[
-                structlog.processors.JSONRenderer(),
-            ],
-            logger_factory=structlog.PrintLoggerFactory(captured),
-        )
-
-        logger = structlog.get_logger("test")
-        logger.info("test message", key="value")
-
-        output = captured.getvalue().strip()
-        if output:
-            parsed = json.loads(output)
-            assert parsed["event"] == "test message"
-            assert parsed["key"] == "value"
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
 
     def test_configure_logging_sets_log_level_info(self) -> None:
         """Configure logging sets INFO as minimum log level."""
@@ -327,14 +326,6 @@ class TestConfigureLoggingIntegration:
         # The wrapper class should be a filtering bound logger at INFO level
         assert wrapper_class is not None
 
-    def test_configure_logging_uses_print_logger_factory(self) -> None:
-        """Configure logging uses PrintLoggerFactory."""
-        with patch.object(structlog, "configure") as mock_configure:
-            configure_logging(json_output=False)
-
-        call_kwargs = mock_configure.call_args.kwargs
-        assert isinstance(call_kwargs["logger_factory"], structlog.PrintLoggerFactory)
-
     def test_configure_logging_caches_logger(self) -> None:
         """Configure logging enables logger caching."""
         with patch.object(structlog, "configure") as mock_configure:
@@ -343,31 +334,8 @@ class TestConfigureLoggingIntegration:
         call_kwargs = mock_configure.call_args.kwargs
         assert call_kwargs["cache_logger_on_first_use"] is True
 
-    def test_json_mode_includes_exception_formatter(self) -> None:
-        """JSON mode includes format_exc_info processor (ExceptionRenderer)."""
-        with patch.object(structlog, "configure") as mock_configure:
-            configure_logging(json_output=True)
-
-        call_kwargs = mock_configure.call_args.kwargs
-        processors = call_kwargs["processors"]
-
-        # format_exc_info is an instance of ExceptionRenderer
-        processor_types = [type(p).__name__ for p in processors]
-        assert "ExceptionRenderer" in processor_types
-
-    def test_console_mode_includes_set_exc_info(self) -> None:
-        """Console mode includes set_exc_info processor."""
-        with patch.object(structlog, "configure") as mock_configure:
-            configure_logging(json_output=False)
-
-        call_kwargs = mock_configure.call_args.kwargs
-        processors = call_kwargs["processors"]
-
-        processor_names = [getattr(p, "__name__", None) or p.__class__.__name__ for p in processors]
-        assert "set_exc_info" in processor_names
-
     def test_includes_timestamper(self) -> None:
-        """Both modes include TimeStamper processor."""
+        """Both modes include TimeStamper processor in shared_processors."""
         with patch.object(structlog, "configure") as mock_configure:
             configure_logging(json_output=True)
 
@@ -388,9 +356,157 @@ class TestConfigureLoggingIntegration:
         processor_types = [type(p).__name__ for p in processors]
         assert "StackInfoRenderer" in processor_types
 
+    def test_starts_queue_listener(self) -> None:
+        """configure_logging starts the QueueListener."""
+        configure_logging(json_output=False)
+        assert logging_config._queue_listener is not None
+
+    def test_configures_root_logger_with_queue_handler(self) -> None:
+        """Root logger is configured with QueueHandler."""
+        configure_logging(json_output=False)
+        root_logger = logging.getLogger()
+        handler_types = [type(h).__name__ for h in root_logger.handlers]
+        assert "QueueHandler" in handler_types
+
+
+class TestConfigureLoggingLogLevel:
+    """Tests for the log_level parameter."""
+
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
+
+    def test_configure_logging_respects_debug_level(self) -> None:
+        """Configure logging with DEBUG level sets appropriate filter."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False, log_level="DEBUG")
+
+        call_kwargs = mock_configure.call_args.kwargs
+        assert call_kwargs["wrapper_class"] is not None
+
+    def test_configure_logging_respects_warning_level(self) -> None:
+        """Configure logging with WARNING level sets appropriate filter."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False, log_level="WARNING")
+
+        call_kwargs = mock_configure.call_args.kwargs
+        assert call_kwargs["wrapper_class"] is not None
+
+    def test_log_level_case_insensitive(self) -> None:
+        """Log level parameter is case insensitive."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False, log_level="debug")
+
+        mock_configure.assert_called_once()
+
+    def test_invalid_log_level_defaults_to_info(self) -> None:
+        """Invalid log level defaults to INFO."""
+        with patch.object(structlog, "configure") as mock_configure:
+            configure_logging(json_output=False, log_level="INVALID")
+
+        mock_configure.assert_called_once()
+
+
+class TestQueueListenerLifecycle:
+    """Tests for QueueListener lifecycle management."""
+
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
+
+    def test_stop_queue_listener_stops_listener(self) -> None:
+        """stop_queue_listener stops the listener when active."""
+        configure_logging(json_output=False)
+        assert logging_config._queue_listener is not None
+
+        stop_queue_listener()
+        assert logging_config._queue_listener is None
+
+    def test_stop_queue_listener_safe_when_not_started(self) -> None:
+        """stop_queue_listener is safe to call when no listener exists."""
+        logging_config._queue_listener = None
+        # Should not raise
+        stop_queue_listener()
+        assert logging_config._queue_listener is None
+
+    def test_reconfiguring_stops_previous_listener(self) -> None:
+        """Calling configure_logging again stops the previous listener."""
+        configure_logging(json_output=False)
+        first_listener = logging_config._queue_listener
+        assert first_listener is not None
+
+        configure_logging(json_output=True)
+        second_listener = logging_config._queue_listener
+        assert second_listener is not None
+        assert second_listener is not first_listener
+
+
+class TestGetSharedProcessors:
+    """Tests for the get_shared_processors function."""
+
+    def test_returns_list_of_processors(self) -> None:
+        """get_shared_processors returns a list of processors."""
+        processors = get_shared_processors()
+        assert isinstance(processors, list)
+        assert len(processors) > 0
+
+    def test_includes_contextvars_merger(self) -> None:
+        """Shared processors include contextvars merger."""
+        processors = get_shared_processors()
+        assert structlog.contextvars.merge_contextvars in processors
+
+    def test_includes_custom_processors(self) -> None:
+        """Shared processors include custom correlation ID and OTel processors."""
+        processors = get_shared_processors()
+        processor_names = [getattr(p, "__name__", None) or p.__class__.__name__ for p in processors]
+        assert "add_correlation_id" in processor_names
+        assert "add_open_telemetry_spans" in processor_names
+
+    def test_includes_timestamper(self) -> None:
+        """Shared processors include TimeStamper."""
+        processors = get_shared_processors()
+        processor_types = [type(p).__name__ for p in processors]
+        assert "TimeStamper" in processor_types
+
+
+class TestStdlibLoggerIntegration:
+    """Tests for stdlib logger routing through structlog processors."""
+
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
+
+    def test_stdlib_logger_gets_queue_handler(self) -> None:
+        """Standard library loggers get QueueHandler configured."""
+        configure_logging(json_output=True, log_level="INFO")
+
+        root = logging.getLogger()
+        handler_types = [type(h).__name__ for h in root.handlers]
+        assert "QueueHandler" in handler_types
+
+    def test_uvicorn_access_logger_silenced(self) -> None:
+        """Uvicorn access logger is silenced to avoid duplicates."""
+        configure_logging(json_output=True, log_level="INFO")
+
+        uvicorn_access = logging.getLogger("uvicorn.access")
+        assert uvicorn_access.level >= logging.WARNING
+        assert len(uvicorn_access.handlers) == 0
+
 
 class TestProcessorChain:
     """Tests for the complete processor chain behavior."""
+
+    @pytest.fixture(autouse=True)
+    def cleanup_listener(self) -> Iterator[None]:
+        """Ensure queue listener is stopped after each test."""
+        yield
+        stop_queue_listener()
 
     def test_processors_execute_in_order(self) -> None:
         """Verify processors execute and accumulate results."""

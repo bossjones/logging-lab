@@ -24,7 +24,8 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.trace import Status, StatusCode
 
-from logging_lab.logging_config import configure_logging, get_logger
+from logging_lab.logging_config import configure_logging, get_logger, stop_queue_listener
+from logging_lab.middleware import AccessLogMiddleware
 from logging_lab.telemetry import get_tracer, record_exception_on_span, setup_telemetry
 
 
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # pyright: ignore[repo
     yield
 
     log.info("Application shutting down")
+    stop_queue_listener()
 
 
 app = FastAPI(
@@ -56,6 +58,7 @@ app = FastAPI(
 )
 
 app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(AccessLogMiddleware)
 
 FastAPIInstrumentor.instrument_app(app)
 
