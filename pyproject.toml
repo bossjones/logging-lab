@@ -38,6 +38,11 @@ classifiers = [
 # ---- Main dependencies ----
 
 dependencies = [
+    "fastapi[standard]>=0.128.0",
+    "orjson>=3.11.5",
+    "pydantic-extra-types>=2.10.6",
+    "pydantic-settings>=2.12.0",
+    "structlog>=25.5.0",
 ]
 
 
