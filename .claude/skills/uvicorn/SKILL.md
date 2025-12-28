@@ -19,13 +19,13 @@ Uvicorn is a lightning-fast ASGI server implementation, using uvloop and httptoo
 
 ```bash
 # Run ASGI app
-uvicorn main:app
+uv run uvicorn main:app
 
 # With host/port
-uvicorn main:app --host 0.0.0.0 --port 8000
+uv run uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Development with auto-reload
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 ## Common Patterns
@@ -62,7 +62,7 @@ async def root():
 ```
 
 ```bash
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 ### 3. Application Factory Pattern
@@ -80,7 +80,7 @@ app = create_app()
 ```
 
 ```bash
-uvicorn --factory main:create_app
+uv run uvicorn --factory main:create_app
 ```
 
 ### 4. Programmatic Server Control
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 export UVICORN_HOST="0.0.0.0"
 export UVICORN_PORT="8000"
 export UVICORN_RELOAD="true"
-uvicorn main:app
+uv run uvicorn main:app
 ```
 
 ## Production Deployment
@@ -121,7 +121,7 @@ uvicorn main:app
 
 ```bash
 # Use multiple worker processes
-uvicorn main:app --workers 4
+uv run uvicorn main:app --workers 4
 
 # Note: Can't use --reload with --workers
 ```
@@ -133,19 +133,19 @@ uvicorn main:app --workers 4
 uv add gunicorn
 
 # Run with Gunicorn process manager
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
+uv run gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
 ```
 
 ### HTTPS/SSL
 
 ```bash
-uvicorn main:app --ssl-keyfile=./key.pem --ssl-certfile=./cert.pem
+uv run uvicorn main:app --ssl-keyfile=./key.pem --ssl-certfile=./cert.pem
 ```
 
 ### Unix Socket
 
 ```bash
-uvicorn main:app --uds /tmp/uvicorn.sock
+uv run uvicorn main:app --uds /tmp/uvicorn.sock
 ```
 
 ## Configuration Options
@@ -153,7 +153,7 @@ uvicorn main:app --uds /tmp/uvicorn.sock
 ### Common CLI Flags
 
 ```bash
-uvicorn main:app \
+uv run uvicorn main:app \
   --host 0.0.0.0 \
   --port 8000 \
   --reload \
@@ -219,7 +219,7 @@ services:
 ### Debug Mode
 
 ```bash
-uvicorn main:app --reload --log-level debug
+uv run uvicorn main:app --reload --log-level debug
 ```
 
 ### Health Checks

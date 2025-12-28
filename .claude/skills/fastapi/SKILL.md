@@ -26,7 +26,7 @@ async def read_item(item_id: int, q: str | None = None):
 Run with:
 
 ```bash
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 ## Common patterns

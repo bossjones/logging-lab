@@ -26,16 +26,16 @@ def test_string_operations():
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with verbose output
-pytest -v
+uv run pytest -v
 
 # Run specific test file
-pytest test_example.py
+uv run pytest test_example.py
 
 # Run specific test function
-pytest test_example.py::test_addition
+uv run pytest test_example.py::test_addition
 ```
 
 ## Common Patterns
@@ -235,13 +235,13 @@ def test_database_integration():
 
 ```bash
 # Run only unit tests
-pytest -m unit
+uv run pytest -m unit
 
 # Skip slow tests
-pytest -m "not slow"
+uv run pytest -m "not slow"
 
 # Run integration or unit tests
-pytest -m "integration or unit"
+uv run pytest -m "integration or unit"
 ```
 
 ## Practical Code Snippets
