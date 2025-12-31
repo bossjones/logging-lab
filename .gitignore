@@ -187,3 +187,4 @@ src/screencropnet_yolov11/config/datasets/
 cov.xml
 junit/
 monkeytype.sqlite3
+.envrc

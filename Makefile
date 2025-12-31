@@ -4,7 +4,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype locust locust-ui serve
+.PHONY: default install lint test check open-coverage upgrade build clean agent-rules help monkeytype-create monkeytype-apply autotype locust locust-ui serve serve-otel otel-deps
 
 default: agent-rules install lint test ## Run agent-rules, install, lint, and test
 
@@ -113,3 +113,13 @@ locust-ui: ## Run Locust with web UI. Usage: make locust-ui [HOST=http://localho
 serve: ## Start the FastAPI server. Usage: make serve [PORT=5002] [RELOAD=--reload]
 	@echo "🚀 Starting FastAPI server"
 	@uv run uvicorn logging_lab.app:app --host 0.0.0.0 --port $(or $(PORT),5002) $(RELOAD)
+
+.PHONY: serve-otel
+serve-otel: ## Start the FastAPI server with OpenTelemetry instrumentation. Usage: make serve-otel [PORT=5002] [RELOAD=--reload]
+	@echo "🚀 Starting FastAPI server with OpenTelemetry instrumentation"
+	@uv run opentelemetry-instrument uvicorn logging_lab.app:app --host 0.0.0.0 --port $(or $(PORT),5002) $(RELOAD)
+
+.PHONY: otel-deps
+otel-deps: ## List required OpenTelemetry dependencies
+	@echo "🚀 Listing required OpenTelemetry dependencies"
+	@uv run opentelemetry-bootstrap -a requirements
