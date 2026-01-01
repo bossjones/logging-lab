@@ -1,28 +1,4 @@
-# # OpenTelemetry configuration for SigNoz
-# # Default to localhost - change SIGNOZ_HOST if running SigNoz elsewhere
-# export SIGNOZ_HOST="${SIGNOZ_HOST:-localhost}"
 
-# # OpenTelemetry Resource Attributes
-# export OTEL_RESOURCE_ATTRIBUTES="service.name=fastapiApp"
-
-# # OTLP Exporter Configuration
-# # Using gRPC protocol (default) - port 4317
-# export OTEL_EXPORTER_OTLP_ENDPOINT="http://${SIGNOZ_HOST}:4317"
-# export OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
-
-# # Alternative: For HTTP/protobuf protocol, uncomment these and comment out the gRPC lines above:
-# # export OTEL_EXPORTER_OTLP_ENDPOINT="http://${SIGNOZ_HOST}:4318"
-# # export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
-
-# # Application configuration
-# export APP_HOST="${APP_HOST:-localhost}"
-# export APP_PORT="${APP_PORT:-5002}"
-
-# # SigNoz UI URL (for reference)
-# export SIGNOZ_UI_URL="http://${SIGNOZ_HOST}:3301"
-
-
-#
 # Required
 export OTEL_SERVICE_NAME=logging-lab
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318  # HTTP endpoint
