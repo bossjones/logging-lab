@@ -188,3 +188,19 @@ cov.xml
 junit/
 monkeytype.sqlite3
 .envrc
+
+# from lunar-claude
+.mcp.json
+.mcp.json.backup
+.vscode
+.DS_Store
+.venv
+.worktrees/
+.rumdl-cache
+.ruff_cache
+*.pyc
+mise.local.toml
+
+.lychee-report.md
+.lycheecache
+.claude/research-cache
