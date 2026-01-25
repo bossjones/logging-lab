@@ -236,3 +236,4 @@ deep_docs
 *.log
 logs/
 !logs/.gitkeep
+.mcp.json.firecrawl_7k
