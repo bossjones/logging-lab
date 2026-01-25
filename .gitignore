@@ -204,3 +204,35 @@ mise.local.toml
 .lychee-report.md
 .lycheecache
 .claude/research-cache
+
+
+# Specs - ignore everything except specific plan files
+specs/*
+!specs/plan_new_feature_sonnet45.md
+!specs/plan_new_feature_haiku45.md
+
+# App docs - ignore everything
+app_docs/
+
+.mcp.json
+
+# AI docs - ignore everything except specific answer files
+ai_docs/*
+!ai_docs/sonnet45/
+!ai_docs/haiku45/
+ai_docs/sonnet45/*
+ai_docs/haiku45/*
+!ai_docs/sonnet45/answers.md
+!ai_docs/haiku45/answers.md
+!ai_docs/README.md
+
+# Claude Code session data
+.claude/data/
+
+
+trees/
+
+deep_docs
+*.log
+logs/
+!logs/.gitkeep
