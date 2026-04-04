@@ -1,11 +1,11 @@
 {
+  "statusLine": {
+    "type": "command",
+    "command": "uv run $CLAUDE_PROJECT_DIR/.claude/status_lines/status_line_main.py",
+    "padding": 0
+  },
   "enabledPlugins": {
-    "meta-claude@lunar-claude": true,
     "python-tools@lunar-claude": true,
-    "git-workflow@lunar-claude": true,
-    "hookify@lunar-claude": true,
-    "documentation-generation@claude-code-workflows": true,
-    "observability-monitoring@claude-code-workflows": true,
-    "docker-master@claude-plugin-marketplace": true
+    "observability-monitoring@claude-code-workflows": true
   }
 }
